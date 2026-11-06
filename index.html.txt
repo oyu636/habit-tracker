@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>マイトラッカー</title>
+
+  <!-- PWA認識用の設定 -->
+  <link rel="manifest" href="manifest.json">
+
+  <!-- iPhone（iOS Safari）向け専用設定 -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="トラッカー">
+  <link rel="apple-touch-icon" href="icon.png">
+
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      margin: 0;
+      padding: 40px 20px;
+      text-align: center;
+      background-color: #f7f7f7;
+    }
+    .card {
+      background: white;
+      padding: 30px;
+      border-radius: 16px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      max-width: 300px;
+      margin: 0 auto;
+    }
+    button {
+      padding: 12px 24px;
+      font-size: 16px;
+      font-weight: bold;
+      color: white;
+      background-color: #007aff;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <h2>マイカウンター</h2>
+    <p style="font-size: 48px; margin: 20px 0;" id="count">0</p>
+    <button onclick="addCount()">カウントUP</button>
+  </div>
+
+  <script>
+    let num = 0;
+    function addCount() {
+      num++;
+      document.getElementById('count').textContent = num;
+    }
+  </script>
+</body>
+</html>
