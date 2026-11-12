@@ -24,7 +24,6 @@
       user-select: none;
       -webkit-tap-highlight-color: transparent;
     }
-    /* 追加：上部のヘッダーと追加ボタンのスタイル */
     .header {
       display: flex;
       justify-content: space-between;
@@ -104,11 +103,18 @@
       font-weight: bold;
       text-align: center;
       word-break: break-all;
+      /* 名前部分をタップしやすくするために少し余白を追加 */
+      padding: 4px 8px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    /* タップした時に少し背景を暗くして反応を見せる */
+    .title:active {
+      background-color: rgba(255,255,255,0.1);
     }
   </style>
 </head>
 <body>
-  <!-- ヘッダー部分 -->
   <div class="header">
     <div class="header-title">マイトラッカー</div>
     <button class="add-btn" onclick="addNewTask()">＋</button>
@@ -117,7 +123,6 @@
   <div class="grid" id="app"></div>
 
   <script>
-    // デフォルトの6項目（初回起動時のみ使用されるベースデータ）
     const defaultTasks = [
       { id: 't1', title: '顔の運動7種', icon: '🔥', dashed: [] },
       { id: 't2', title: 'ジム1h(🏃‍♀️30m,他)', icon: '🔥', dashed: [6] },
@@ -127,14 +132,12 @@
       { id: 't6', title: 'web関連制作1h', icon: '🔥', dashed: [6] }
     ];
 
-    // 変更点1：「項目のリスト」自体もiPhone内に保存するように変更
     let tasks = JSON.parse(localStorage.getItem('dothabit_tasks')) || defaultTasks;
     let data = JSON.parse(localStorage.getItem('dothabit_data')) || {};
     const app = document.getElementById('app');
 
-    // 画面にカードを並べる処理を関数（まとまり）化
     function renderTasks() {
-      app.innerHTML = ''; // 一度画面のカードをすべて消去して再構築する
+      app.innerHTML = ''; 
       
       tasks.forEach(task => {
         if (!data[task.id]) data[task.id] = [];
@@ -183,34 +186,25 @@
         title.className = 'title';
         title.textContent = task.title;
         
-        card.append(cal, stat, title);
-        app.appendChild(card);
-      });
-    }
-
-    // 変更点2：新しい項目を追加する処理
-    function addNewTask() {
-      // iPhone標準の文字入力ポップアップを出す
-      const title = prompt("新しい項目の名前を入力してください:");
-      
-      // キャンセルを押した時や、空欄のままOKを押した時は何もしない
-      if (!title) return; 
-      
-      // データが混ざらないよう、作成した時間を使って一意のIDを作る
-      const newId = 't_' + Date.now();
-      
-      // 新しい項目をリストの最後に追加
-      tasks.push({ id: newId, title: title, icon: '🔥', dashed: [] });
-      
-      // 追加されたリストをiPhoneに保存
-      localStorage.setItem('dothabit_tasks', JSON.stringify(tasks));
-      
-      // 画面を再構築して新しい項目を表示させる
-      renderTasks();
-    }
-
-    // 初回の画面表示を実行
-    renderTasks();
-  </script>
-</body>
-</html>
+        // --- 今回の追加部分：ダブルタップで名前を変更 ---
+        let lastTap = 0;
+        title.addEventListener('click', (e) => {
+          const currentTime = new Date().getTime();
+          const tapLength = currentTime - lastTap;
+          
+          // 0.5秒（500ms）以内に2回タップされたら発動
+          if (tapLength < 500 && tapLength > 0) {
+            // 現在の名前が入力された状態でポップアップを出す
+            const newTitle = prompt("項目の名前を変更します:", task.title);
+            
+            // キャンセルされず、かつ空欄でない場合のみ更新
+            if (newTitle !== null && newTitle.trim() !== "") {
+              task.title = newTitle.trim(); 
+              localStorage.setItem('dothabit_tasks', JSON.stringify(tasks)); // リストを保存
+              title.textContent = task.title; // 画面を更新
+            }
+            e.preventDefault();
+          }
+          lastTap = currentTime;
+        });
+        //
