@@ -1,235 +1,216 @@
-963 2.286a.75.75 0 00-1.071-.136 9<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <!-- PWA用のViewport設定（ズーム禁止など） -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Habit Tracker</title>
-    
-    <!-- PWA用メタタグ -->
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Habit">
-    
-    <!-- Tailwind CSS (スタイリング用) -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- カスタムカラーの設定 -->
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        appbg: '#1c1c1e', // アプリ全体の背景（黒に近いグレー）
-                        cardbg: '#2c2c2e', // カードの背景
-                        daybg: '#3a3a3c',  // 未達成の日の背景
-                        daytext: '#8e8e93', // 未達成の日の文字色
-                        accent: '#ff453a', // 達成時の赤
-                    }
-                }
-            }
-        }
-    </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Habit Tracker</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="apple-touch-icon" href="icon.png">
+  <style>
+    :root {
+      --bg: #222224;
+      --card: #38383a;
+      --text: #ffffff;
+      --text-dim: #8e8e93;
+      --accent: #ff453a;
+    }
+    body {
+      font-family: -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 20px 16px;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    /* 追加：上部のヘッダーと追加ボタンのスタイル */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      margin-top: env(safe-area-inset-top);
+      padding: 0 4px;
+    }
+    .header-title {
+      font-size: 22px;
+      font-weight: bold;
+    }
+    .add-btn {
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 32px;
+      height: 32px;
+      font-size: 22px;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    .card {
+      background: var(--card);
+      border-radius: 16px;
+      padding: 16px 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .cal {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 4px;
+      width: 100%;
+      margin-bottom: 12px;
+    }
+    .day {
+      aspect-ratio: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: bold;
+      color: var(--text-dim);
+      border: 1px solid #4a4a4c;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .day.active {
+      background: var(--accent);
+      color: #ffffff;
+      border-color: var(--accent);
+    }
+    .day.dashed {
+      border: 1px dashed var(--text-dim);
+    }
+    .stat {
+      font-size: 20px;
+      font-weight: bold;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .title {
+      font-size: 13px;
+      font-weight: bold;
+      text-align: center;
+      word-break: break-all;
+    }
+  </style>
+</head>
+<body>
+  <!-- ヘッダー部分 -->
+  <div class="header">
+    <div class="header-title">マイトラッカー</div>
+    <button class="add-btn" onclick="addNewTask()">＋</button>
+  </div>
+  
+  <div class="grid" id="app"></div>
 
-    <style>
-        /* デフォルトのタップハイライトを無効化し、ネイティブアプリっぽくする */
-        * {
-            -webkit-tap-highlight-color: transparent;
-            user-select: none;
-        }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: #1c1c1e; /* フォールバック */
-            color: white;
+  <script>
+    // デフォルトの6項目（初回起動時のみ使用されるベースデータ）
+    const defaultTasks = [
+      { id: 't1', title: '顔の運動7種', icon: '🔥', dashed: [] },
+      { id: 't2', title: 'ジム1h(🏃‍♀️30m,他)', icon: '🔥', dashed: [6] },
+      { id: 't3', title: '太もも', icon: '🔥', dashed: [] },
+      { id: 't4', title: 'プランク1m', icon: '🔥', dashed: [] },
+      { id: 't5', title: '背中', icon: '🔥', dashed: [] },
+      { id: 't6', title: 'web関連制作1h', icon: '🔥', dashed: [6] }
+    ];
+
+    // 変更点1：「項目のリスト」自体もiPhone内に保存するように変更
+    let tasks = JSON.parse(localStorage.getItem('dothabit_tasks')) || defaultTasks;
+    let data = JSON.parse(localStorage.getItem('dothabit_data')) || {};
+    const app = document.getElementById('app');
+
+    // 画面にカードを並べる処理を関数（まとまり）化
+    function renderTasks() {
+      app.innerHTML = ''; // 一度画面のカードをすべて消去して再構築する
+      
+      tasks.forEach(task => {
+        if (!data[task.id]) data[task.id] = [];
+        const card = document.createElement('div');
+        card.className = 'card';
+        
+        const cal = document.createElement('div');
+        cal.className = 'cal';
+        
+        for (let i = 1; i <= 30; i++) {
+          const d = document.createElement('div');
+          d.className = 'day';
+          d.textContent = i;
+          
+          if (data[task.id].includes(i)) {
+            d.classList.add('active');
+          } else if (task.dashed && task.dashed.includes(i)) {
+            d.classList.add('dashed');
+          }
+          
+          d.onclick = () => {
+            if (data[task.id].includes(i)) {
+              data[task.id] = data[task.id].filter(v => v !== i);
+              d.classList.remove('active');
+            } else {
+              data[task.id].push(i);
+              d.classList.add('active');
+              d.classList.remove('dashed');
+            }
+            localStorage.setItem('dothabit_data', JSON.stringify(data));
+            updateStat();
+          };
+          cal.appendChild(d);
         }
         
-        /* 破線の枠（今日のターゲットなど）用のアニメーションやスタイル */
-        .target-day {
-            border: 1.5px dashed #8e8e93;
-            background-color: transparent;
-        }
-    </style>
-</head>
-<body class="bg-appbg min-h-screen p-4 pb-10">
-
-    <!-- ヘッダー部分 -->
-    <header class="flex justify-between items-center mb-6 mt-8 px-1">
-        <div class="w-10 h-10 border-2 border-white rounded-xl flex items-center justify-center font-bold text-xl">
-            2
-        </div>
-        <div class="text-gray-400">
-            <!-- 歯車アイコン (SVG) -->
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-7 h-7">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-        </div>
-    </header>
-
-    <!-- タスクカードを並べるグリッド（2列） -->
-    <div id="app-container" class="grid grid-cols-2 gap-3 sm:gap-4 max-w-lg mx-auto">
-        <!-- JavaScriptでここにカードが生成されます -->
-    </div>
-
-    <script>
-        // --- 1. タスクの初期データ定義 ---
-        // name: タスク名
-        // today: モックとしての「今日」の日付（破線で表示する用）
-        const TASKS = [
-            { id: 'face', name: '顔の運動7種', today: 6 },
-            { id: 'gym', name: 'ジム1h(🏃‍♀️30m,他)', today: 6 },
-            { id: 'thigh', name: '太もも', today: 6 },
-            { id: 'plank', name: 'プランク1m', today: 6 },
-            { id: 'back', name: '背中', today: 6 },
-            { id: 'web', name: 'web関連制作1h', today: 6 }
-        ];
-
-        // 画像に合わせた初期状態のデータ（初回起動時のみ使用）
-        const INITIAL_MOCK_DATA = {
-            'face': [3, 5, 6],
-            'gym': [],
-            'thigh': [5, 6],
-            'plank': [5, 6],
-            'back': [6],
-            'web': []
+        const stat = document.createElement('div');
+        stat.className = 'stat';
+        const updateStat = () => {
+          const count = data[task.id].length;
+          const iconColor = count > 0 ? 'var(--accent)' : 'var(--text-dim)';
+          stat.innerHTML = `<span style="color: ${iconColor}; font-size: 16px;">${task.icon}</span> ${count}`;
         };
+        updateStat();
+        
+        const title = document.createElement('div');
+        title.className = 'title';
+        title.textContent = task.title;
+        
+        card.append(cal, stat, title);
+        app.appendChild(card);
+      });
+    }
 
-        // --- 2. データ管理（localStorageの読み書き） ---
-        let appData = {};
+    // 変更点2：新しい項目を追加する処理
+    function addNewTask() {
+      // iPhone標準の文字入力ポップアップを出す
+      const title = prompt("新しい項目の名前を入力してください:");
+      
+      // キャンセルを押した時や、空欄のままOKを押した時は何もしない
+      if (!title) return; 
+      
+      // データが混ざらないよう、作成した時間を使って一意のIDを作る
+      const newId = 't_' + Date.now();
+      
+      // 新しい項目をリストの最後に追加
+      tasks.push({ id: newId, title: title, icon: '🔥', dashed: [] });
+      
+      // 追加されたリストをiPhoneに保存
+      localStorage.setItem('dothabit_tasks', JSON.stringify(tasks));
+      
+      // 画面を再構築して新しい項目を表示させる
+      renderTasks();
+    }
 
-        function loadData() {
-            const savedData = localStorage.getItem('habitTrackerData');
-            if (savedData) {
-                appData = JSON.parse(savedData);
-            } else {
-                // 初回アクセス時は画像のようなモックデータをセット
-                appData = INITIAL_MOCK_DATA;
-                saveData();
-            }
-        }
-
-        function saveData() {
-            localStorage.setItem('habitTrackerData', JSON.stringify(appData));
-        }
-
-        // --- 3. 達成日数の計算 ---
-        // 選択された合計日数を計算します（連続日数ではなく全アクティブ日数）
-        function calculateStreak(taskId, today) {
-            const completedDays = appData[taskId] || [];
-            return completedDays.length;
-        }
-
-        // --- 4. 日付をタップしたときの処理 ---
-        function toggleDay(taskId, day, today) {
-            if (!appData[taskId]) {
-                appData[taskId] = [];
-            }
-            
-            const index = appData[taskId].indexOf(day);
-            if (index === -1) {
-                // 未達成なら達成（配列に追加）
-                appData[taskId].push(day);
-            } else {
-                // 達成済みなら未達成（配列から削除）
-                appData[taskId].splice(index, 1);
-            }
-            
-            saveData(); // localStorageに保存
-
-            // 画面の更新 (DOMを直接操作して軽くする)
-            const dayEl = document.getElementById(`day-${taskId}-${day}`);
-            const streakEl = document.getElementById(`streak-${taskId}`);
-            const fireIconEl = document.getElementById(`fire-${taskId}`);
-            
-            // 色の切り替え
-            const isCompleted = index === -1; // さっき追加されたならtrue
-            
-            if (isCompleted) {
-                dayEl.className = "flex items-center justify-center rounded text-xs font-bold w-full aspect-square cursor-pointer transition-colors bg-accent text-white";
-            } else {
-                // 未達成に戻す場合（今日のターゲットだった場合は破線に戻す）
-                if (day === today) {
-                    dayEl.className = "flex items-center justify-center rounded text-xs font-bold w-full aspect-square cursor-pointer transition-colors target-day text-daytext";
-                } else {
-                    dayEl.className = "flex items-center justify-center rounded text-xs font-bold w-full aspect-square cursor-pointer transition-colors bg-daybg text-daytext";
-                }
-            }
-
-            // ストリークの更新
-            const newStreak = calculateStreak(taskId, today);
-            streakEl.textContent = newStreak;
-            
-            // 炎アイコンの色をストリークによって変える
-            if (newStreak > 0) {
-                fireIconEl.classList.remove('text-gray-600');
-                fireIconEl.classList.add('text-accent');
-            } else {
-                fireIconEl.classList.remove('text-accent');
-                fireIconEl.classList.add('text-gray-600');
-            }
-        }
-
-        // --- 5. 画面の描画処理 ---
-        function renderApp() {
-            const container = document.getElementById('app-container');
-            container.innerHTML = ''; // 一旦クリア
-
-            TASKS.forEach(task => {
-                const completedDays = appData[task.id] || [];
-                const streakCount = calculateStreak(task.id, task.today);
-                
-                // カードの枠組み
-                const card = document.createElement('div');
-                card.className = "bg-cardbg rounded-3xl p-3 sm:p-4 flex flex-col justify-between shadow-lg";
-                
-                // カレンダーのグリッド生成 (7列 x 5行程度)
-                let calendarHTML = `<div class="grid grid-cols-7 gap-1 sm:gap-1.5 mb-4">`;
-                
-                for (let day = 1; day <= 30; day++) {
-                    let dayClasses = "flex items-center justify-center rounded text-xs font-bold w-full aspect-square cursor-pointer transition-colors ";
-                    
-                    if (completedDays.includes(day)) {
-                        // 達成済み（赤色）
-                        dayClasses += "bg-accent text-white";
-                    } else if (day === task.today) {
-                        // 今日（未達成の場合は破線）
-                        dayClasses += "target-day text-daytext";
-                    } else {
-                        // 過去の未達成日（グレー）
-                        dayClasses += "bg-daybg text-daytext";
-                    }
-
-                    // クリックイベントでtoggleDay関数を呼ぶ
-                    calendarHTML += `<div id="day-${task.id}-${day}" class="${dayClasses}" onclick="toggleDay('${task.id}', ${day}, ${task.today})">${day}</div>`;
-                }
-                calendarHTML += `</div>`;
-
-                // ストリーク（炎アイコンと数字）とタスク名部分
-                const fireColorClass = streakCount > 0 ? 'text-accent' : 'text-gray-600';
-                
-                const footerHTML = `
-                    <div class="flex flex-col items-center mt-auto">
-                        <div class="flex items-center justify-center gap-1 mb-2">
-                            <!-- 炎アイコン -->
-                            <svg id="fire-${task.id}" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5 sm:w-6 sm:h-6 ${fireColorClass}">
-                                <path fill-rule="evenodd" d="M12..742 9.742 0 00-3.539 6.177A7.547 7.547 0 016.648 6.61a.75.75 0 00-1.152.082A9 9 0 1015.68 4.534a7.46 7.46 0 01-2.717-2.248zM15.75 14.25a3.75 3.75 0 11-7.313-1.172c.628.465 1.35.81 2.133 1a5.99 5.99 0 011.925-3.545 3.75 3.75 0 013.255 3.717z" clip-rule="evenodd" />
-                            </svg>
-                            <span id="streak-${task.id}" class="text-xl sm:text-2xl font-bold">${streakCount}</span>
-                        </div>
-                        <h3 class="text-sm sm:text-base font-bold text-center leading-tight truncate w-full">${task.name}</h3>
-                    </div>
-                `;
-
-                card.innerHTML = calendarHTML + footerHTML;
-                container.appendChild(card);
-            });
-        }
-
-        // --- 6. アプリの起動 ---
-        window.onload = () => {
-            loadData();
-            renderApp();
-        };
-    </script>
+    // 初回の画面表示を実行
+    renderTasks();
+  </script>
 </body>
 </html>
